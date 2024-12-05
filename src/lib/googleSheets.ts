@@ -15,7 +15,7 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
 
   // Use the public CSV export URL
   const response = await fetch(
-    `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`
+    `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv`
   );
   
   if (!response.ok) {
@@ -23,25 +23,27 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
   }
 
   const text = await response.text();
-  // Remove the garbage characters at the start and end of the response
-  const jsonString = text.substring(47).slice(0, -2);
-  const data = JSON.parse(jsonString);
+  console.log('Fetched data:', text); // Debug log
   
-  // Extract the column headers
-  const headers = data.table.cols.map((col: any) => col.label);
-  
-  // Map the rows to our SheetBook interface
-  return data.table.rows.map((row: any, index: number) => {
-    const values = row.c.map((cell: any) => cell ? cell.v : '');
-    const book: SheetBook = {
-      id: index + 1,
-      title: values[headers.indexOf('title')] || '',
-      author: values[headers.indexOf('author')] || '',
-      description: values[headers.indexOf('description')] || '',
-      coverUrl: values[headers.indexOf('coverUrl')] || 'https://picsum.photos/seed/default/300/450',
-      rating: parseFloat(values[headers.indexOf('rating')]) || 0,
-      genre: values[headers.indexOf('genre')] || '',
-    };
-    return book;
+  // Parse CSV data
+  const rows = text.split('\n').map(row => {
+    // Handle quoted values correctly
+    return row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map(cell => {
+      // Remove quotes if present
+      return cell.replace(/^"|"$/g, '').replace('""', '"');
+    }) || [];
   });
+
+  // Remove header row and empty rows
+  const dataRows = rows.slice(1).filter(row => row.length > 0);
+  
+  return dataRows.map((row, index) => ({
+    id: index + 1,
+    title: row[0] || '',
+    author: row[1] || '',
+    description: row[2] || '',
+    coverUrl: row[3] || 'https://picsum.photos/seed/default/300/450',
+    rating: parseFloat(row[4]) || 0,
+    genre: row[5] || '',
+  }));
 };

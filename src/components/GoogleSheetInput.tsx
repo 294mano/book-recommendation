@@ -13,7 +13,7 @@ export const GoogleSheetInput = ({ onSheetIdSubmit }: GoogleSheetInputProps) => 
 
   const extractSheetId = (url: string) => {
     try {
-      const matches = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      const matches = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
       return matches ? matches[1] : null;
     } catch (error) {
       return null;
@@ -53,7 +53,7 @@ export const GoogleSheetInput = ({ onSheetIdSubmit }: GoogleSheetInputProps) => 
         <Button type="submit">连接</Button>
       </div>
       <p className="text-sm text-gray-500 text-center">
-        提示：请确保您的 Google Sheet 已设置为"任何人都可以查看"
+        提示：请确保您的 Google Sheet 已设置为"任何人都可以查看"，并且包含以下列：title, author, description, coverUrl, rating, genre
       </p>
     </form>
   );
