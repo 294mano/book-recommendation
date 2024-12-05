@@ -52,6 +52,9 @@ export const GoogleSheetInput = ({ onSheetIdSubmit }: GoogleSheetInputProps) => 
         />
         <Button type="submit">连接</Button>
       </div>
+      <p className="text-sm text-gray-500 text-center">
+        提示：请确保您的 Google Sheet 已设置为"任何人都可以查看"
+      </p>
     </form>
   );
 };

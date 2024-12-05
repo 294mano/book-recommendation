@@ -1,7 +1,3 @@
-// Google Sheets API endpoint
-const SHEET_NAME = 'Books';
-const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || ''; // Add your API key to .env
-
 export interface SheetBook {
   id: number;
   title: string;
@@ -13,33 +9,39 @@ export interface SheetBook {
 }
 
 export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
-  if (!API_KEY) {
-    throw new Error('Missing Google Sheets API key');
-  }
-
   if (!sheetId) {
     throw new Error('Missing Sheet ID');
   }
 
+  // Use the public CSV export URL
   const response = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${SHEET_NAME}?key=${API_KEY}`
+    `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json`
   );
   
   if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error?.message || 'Failed to fetch books');
+    throw new Error('Failed to fetch books');
   }
 
-  const data = await response.json();
-  const rows = data.values?.slice(1) || []; // Skip header row
-
-  return rows.map((row: any[], index: number) => ({
-    id: index + 1,
-    title: row[0] || '',
-    author: row[1] || '',
-    description: row[2] || '',
-    coverUrl: row[3] || 'https://picsum.photos/seed/default/300/450',
-    rating: parseFloat(row[4]) || 0,
-    genre: row[5] || '',
-  }));
+  const text = await response.text();
+  // Remove the garbage characters at the start and end of the response
+  const jsonString = text.substring(47).slice(0, -2);
+  const data = JSON.parse(jsonString);
+  
+  // Extract the column headers
+  const headers = data.table.cols.map((col: any) => col.label);
+  
+  // Map the rows to our SheetBook interface
+  return data.table.rows.map((row: any, index: number) => {
+    const values = row.c.map((cell: any) => cell ? cell.v : '');
+    const book: SheetBook = {
+      id: index + 1,
+      title: values[headers.indexOf('title')] || '',
+      author: values[headers.indexOf('author')] || '',
+      description: values[headers.indexOf('description')] || '',
+      coverUrl: values[headers.indexOf('coverUrl')] || 'https://picsum.photos/seed/default/300/450',
+      rating: parseFloat(values[headers.indexOf('rating')]) || 0,
+      genre: values[headers.indexOf('genre')] || '',
+    };
+    return book;
+  });
 };
