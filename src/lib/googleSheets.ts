@@ -1,7 +1,7 @@
 // Google Sheets API endpoint
-const SHEET_ID = '1234567890'; // 替换为您的 Google Sheets ID
-const SHEET_NAME = 'Books'; // 替换为您的工作表名称
-const API_KEY = 'YOUR_API_KEY'; // 替换为您的 Google Sheets API key
+const SHEET_ID = import.meta.env.VITE_GOOGLE_SHEET_ID || ''; // Add your Sheet ID to .env
+const SHEET_NAME = 'Books';
+const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || ''; // Add your API key to .env
 
 export interface SheetBook {
   id: number;
@@ -14,16 +14,21 @@ export interface SheetBook {
 }
 
 export const fetchBooks = async (): Promise<SheetBook[]> => {
+  if (!SHEET_ID || !API_KEY) {
+    throw new Error('Missing Google Sheets configuration');
+  }
+
   const response = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`
   );
   
   if (!response.ok) {
-    throw new Error('Failed to fetch books');
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || 'Failed to fetch books');
   }
 
   const data = await response.json();
-  const rows = data.values.slice(1); // Skip header row
+  const rows = data.values?.slice(1) || []; // Skip header row
 
   return rows.map((row: any[], index: number) => ({
     id: index + 1,

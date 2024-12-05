@@ -14,12 +14,14 @@ const Index = () => {
   const { data: books = [], isLoading, error } = useQuery({
     queryKey: ['books'],
     queryFn: fetchBooks,
-    onError: () => {
-      toast({
-        title: "错误",
-        description: "获取书籍数据失败，请稍后再试",
-        variant: "destructive",
-      });
+    meta: {
+      onError: (error: Error) => {
+        toast({
+          title: "错误",
+          description: error.message || "获取书籍数据失败，请稍后再试",
+          variant: "destructive",
+        });
+      },
     },
   });
 
