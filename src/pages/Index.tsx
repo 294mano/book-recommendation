@@ -2,55 +2,39 @@ import { useState } from "react";
 import { BookCard } from "@/components/BookCard";
 import { BookDialog } from "@/components/BookDialog";
 import { Book } from "@/types/book";
-
-// 示例数据
-const books: Book[] = [
-  {
-    id: 1,
-    title: "三体",
-    author: "刘慈欣",
-    description: "地球文明向宇宙发出的第一声啼鸣，以及它所引发的回声。",
-    coverUrl: "https://picsum.photos/seed/book1/300/450",
-    rating: 4.8,
-    genre: "科幻",
-  },
-  {
-    id: 2,
-    title: "活着",
-    author: "余华",
-    description: "一个人一生的故事，一个家族的兴衰，一个时代的变迁。",
-    coverUrl: "https://picsum.photos/seed/book2/300/450",
-    rating: 4.9,
-    genre: "当代文学",
-  },
-  {
-    id: 3,
-    title: "百年孤独",
-    author: "加西亚·马尔克斯",
-    description: "布恩迪亚家族七代人的传奇故事，魔幻现实主义的经典之作。",
-    coverUrl: "https://picsum.photos/seed/book3/300/450",
-    rating: 4.7,
-    genre: "魔幻现实主义",
-  },
-  {
-    id: 4,
-    title: "围城",
-    author: "钱钟书",
-    description: "一部关于婚姻与人生的讽刺小说，字字珠玑，妙趣横生。",
-    coverUrl: "https://picsum.photos/seed/book4/300/450",
-    rating: 4.6,
-    genre: "现代文学",
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import { fetchBooks } from "@/lib/googleSheets";
+import { useToast } from "@/components/ui/use-toast";
 
 const Index = () => {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  const { data: books = [], isLoading, error } = useQuery({
+    queryKey: ['books'],
+    queryFn: fetchBooks,
+    onError: () => {
+      toast({
+        title: "错误",
+        description: "获取书籍数据失败，请稍后再试",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleBookClick = (book: Book) => {
     setSelectedBook(book);
     setDialogOpen(true);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F5F5F0] py-12 flex items-center justify-center">
+        <div className="text-xl">加载中...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F5F5F0] py-12">
