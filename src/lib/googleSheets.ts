@@ -1,5 +1,4 @@
 // Google Sheets API endpoint
-const SHEET_ID = import.meta.env.VITE_GOOGLE_SHEET_ID || ''; // Add your Sheet ID to .env
 const SHEET_NAME = 'Books';
 const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || ''; // Add your API key to .env
 
@@ -13,13 +12,17 @@ export interface SheetBook {
   genre: string;
 }
 
-export const fetchBooks = async (): Promise<SheetBook[]> => {
-  if (!SHEET_ID || !API_KEY) {
-    throw new Error('Missing Google Sheets configuration');
+export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
+  if (!API_KEY) {
+    throw new Error('Missing Google Sheets API key');
+  }
+
+  if (!sheetId) {
+    throw new Error('Missing Sheet ID');
   }
 
   const response = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${SHEET_NAME}?key=${API_KEY}`
   );
   
   if (!response.ok) {

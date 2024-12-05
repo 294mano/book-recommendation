@@ -5,15 +5,18 @@ import { Book } from "@/types/book";
 import { useQuery } from "@tanstack/react-query";
 import { fetchBooks } from "@/lib/googleSheets";
 import { useToast } from "@/components/ui/use-toast";
+import { GoogleSheetInput } from "@/components/GoogleSheetInput";
 
 const Index = () => {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [sheetId, setSheetId] = useState<string>("");
   const { toast } = useToast();
 
-  const { data: books = [], isLoading, error } = useQuery({
-    queryKey: ['books'],
-    queryFn: fetchBooks,
+  const { data: books = [], isLoading } = useQuery({
+    queryKey: ['books', sheetId],
+    queryFn: () => fetchBooks(sheetId),
+    enabled: !!sheetId,
     meta: {
       onError: (error: Error) => {
         toast({
@@ -30,25 +33,32 @@ const Index = () => {
     setDialogOpen(true);
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#F5F5F0] py-12 flex items-center justify-center">
-        <div className="text-xl">加载中...</div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-[#F5F5F0] py-12">
       <div className="container">
         <h1 className="font-merriweather text-4xl font-bold text-center mb-8">
           精选书籍推荐
         </h1>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {books.map((book) => (
-            <BookCard key={book.id} book={book} onClick={handleBookClick} />
-          ))}
-        </div>
+        
+        <GoogleSheetInput onSheetIdSubmit={setSheetId} />
+
+        {!sheetId && (
+          <div className="text-center text-gray-600 mb-8">
+            请输入 Google Sheets URL 以显示书籍列表
+          </div>
+        )}
+
+        {isLoading && (
+          <div className="text-center text-xl">加载中...</div>
+        )}
+
+        {sheetId && !isLoading && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {books.map((book) => (
+              <BookCard key={book.id} book={book} onClick={handleBookClick} />
+            ))}
+          </div>
+        )}
       </div>
       <BookDialog
         book={selectedBook}
