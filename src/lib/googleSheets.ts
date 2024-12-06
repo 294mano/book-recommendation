@@ -23,27 +23,41 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
   }
 
   const text = await response.text();
-  console.log('Fetched data:', text); // Debug log
+  console.log('Raw CSV data:', text);
   
-  // Parse CSV data
-  const rows = text.split('\n').map(row => {
-    // Handle quoted values correctly
-    return row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g)?.map(cell => {
-      // Remove quotes if present
-      return cell.replace(/^"|"$/g, '').replace('""', '"');
-    }) || [];
-  });
-
+  // Parse CSV data, skipping the header row
+  const rows = text.split('\n')
+    .map(row => {
+      // Handle quoted values correctly
+      const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+      if (!matches) return null;
+      return matches.map(cell => cell.replace(/^"|"$/g, '').replace(/""/g, '"'));
+    })
+    .filter((row): row is string[] => row !== null); // Type guard to filter out null values
+  
   // Remove header row and empty rows
-  const dataRows = rows.slice(1).filter(row => row.length > 0);
+  const dataRows = rows.slice(1).filter(row => row.length >= 6);
   
-  return dataRows.map((row, index) => ({
-    id: index + 1,
-    title: row[0] || '',
-    author: row[1] || '',
-    description: row[2] || '',
-    coverUrl: row[3] || 'https://picsum.photos/seed/default/300/450',
-    rating: parseFloat(row[4]) || 0,
-    sourceUrl: row[5] || '#',
-  }));
+  // Create unique books array
+  const uniqueBooks = dataRows.reduce((acc: SheetBook[], row) => {
+    const title = row[0]?.trim();
+    // Skip if we already have this book or if required fields are missing
+    if (!title || acc.some(book => book.title === title)) {
+      return acc;
+    }
+    
+    acc.push({
+      id: acc.length + 1,
+      title: title,
+      author: row[1]?.trim() || '',
+      description: row[2]?.trim() || '',
+      coverUrl: row[3]?.trim() || 'https://picsum.photos/seed/default/300/450',
+      rating: parseFloat(row[4]) || 0,
+      sourceUrl: row[5]?.trim() || '#',
+    });
+    return acc;
+  }, []);
+
+  console.log('Processed books:', uniqueBooks);
+  return uniqueBooks;
 };
