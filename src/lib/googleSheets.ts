@@ -8,6 +8,22 @@ export interface SheetBook {
   sourceUrl: string;
 }
 
+// Helper function to convert Google Drive URL to direct image URL
+const convertGoogleDriveUrl = (url: string): string => {
+  if (!url) return 'https://picsum.photos/seed/default/300/450';
+  
+  // Check if it's a Google Drive URL
+  if (url.includes('drive.google.com/file/d/')) {
+    // Extract the file ID
+    const fileId = url.match(/\/d\/(.+?)\//)?.[1];
+    if (fileId) {
+      // Return the direct download URL
+      return `https://drive.google.com/uc?export=view&id=${fileId}`;
+    }
+  }
+  return url;
+};
+
 export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
   if (!sheetId) {
     throw new Error('Missing Sheet ID');
@@ -51,7 +67,7 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
       title: title,
       author: row[1]?.trim() || '',
       description: row[2]?.trim() || '',
-      coverUrl: row[3]?.trim() || 'https://picsum.photos/seed/default/300/450',
+      coverUrl: convertGoogleDriveUrl(row[3]?.trim() || ''),
       rating: parseFloat(row[4]) || 0,
       sourceUrl: row[5]?.trim() || '#',
     });
