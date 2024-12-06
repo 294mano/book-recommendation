@@ -35,9 +35,12 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-[#F5F5F0] py-12">
       <div className="container">
-        <h1 className="font-merriweather text-4xl font-bold text-center mb-8">
-          精选书籍推荐
+        <h1 className="font-merriweather text-4xl font-bold text-blue-600 text-center mb-2">
+          2025 AI精選應用書籍及工具索引
         </h1>
+        <h2 className="font-merriweather text-xl text-red-600 text-center mb-8">
+          國家公益發展協進會示範
+        </h2>
 
         {isLoading && (
           <div className="text-center text-xl">加载中...</div>
