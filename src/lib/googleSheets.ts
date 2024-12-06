@@ -5,7 +5,7 @@ export interface SheetBook {
   description: string;
   coverUrl: string;
   rating: number;
-  genre: string;
+  sourceUrl: string;
 }
 
 export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
@@ -44,6 +44,6 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
     description: row[2] || '',
     coverUrl: row[3] || 'https://picsum.photos/seed/default/300/450',
     rating: parseFloat(row[4]) || 0,
-    genre: row[5] || '',
+    sourceUrl: row[5] || '#',
   }));
 };

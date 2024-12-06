@@ -5,5 +5,5 @@ export interface Book {
   description: string;
   coverUrl: string;
   rating: number;
-  genre: string;
+  sourceUrl: string;
 }

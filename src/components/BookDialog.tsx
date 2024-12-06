@@ -5,7 +5,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Book } from "@/types/book";
-import { Star } from "lucide-react";
+import { Star, ExternalLink } from "lucide-react";
 
 interface BookDialogProps {
   book: Book | null;
@@ -38,15 +38,22 @@ export const BookDialog = ({ book, open, onOpenChange }: BookDialogProps) => {
               <p className="text-gray-600">{book.author}</p>
             </div>
             <div className="mb-4">
-              <h4 className="font-semibold mb-1">类型</h4>
-              <p className="text-gray-600">{book.genre}</p>
-            </div>
-            <div className="mb-4">
               <h4 className="font-semibold mb-1">评分</h4>
               <div className="flex items-center gap-1">
                 <Star className="w-5 h-5 fill-yellow-400 stroke-yellow-400" />
                 <span>{book.rating.toFixed(1)}</span>
               </div>
+            </div>
+            <div className="mb-4">
+              <h4 className="font-semibold mb-1">来源链接</h4>
+              <a 
+                href={book.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              >
+                访问来源 <ExternalLink className="w-4 h-4" />
+              </a>
             </div>
             <div>
               <h4 className="font-semibold mb-1">简介</h4>
