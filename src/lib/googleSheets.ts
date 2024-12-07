@@ -17,8 +17,8 @@ const convertGoogleDriveUrl = (url: string): string => {
   if (fileIdMatch && fileIdMatch[1]) {
     const fileId = fileIdMatch[1];
     console.log('Extracted file ID:', fileId);
-    // Return the direct download URL with additional parameters
-    return `https://drive.google.com/uc?export=view&id=${fileId}&cache-control=no-cache`;
+    // Return the direct download URL with additional parameters for better caching and access
+    return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
   }
   
   console.log('URL not converted:', url);
@@ -42,42 +42,45 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
   const text = await response.text();
   console.log('Raw CSV data:', text);
   
-  // Parse CSV data, skipping the header row
+  // Parse CSV data, handling quoted values and newlines properly
   const rows = text.split('\n')
     .map(row => {
       // Handle quoted values correctly
       const matches = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
       if (!matches) return null;
-      return matches.map(cell => cell.replace(/^"|"$/g, '').replace(/""/g, '"'));
+      return matches.map(cell => cell.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
     })
-    .filter((row): row is string[] => row !== null); // Type guard to filter out null values
+    .filter((row): row is string[] => row !== null && row.length >= 6); // Type guard and ensure minimum columns
   
-  // Remove header row and empty rows
-  const dataRows = rows.slice(1).filter(row => row.length >= 6);
+  // Remove header row
+  const dataRows = rows.slice(1);
   
-  // Create unique books array
-  const uniqueBooks = dataRows.reduce((acc: SheetBook[], row) => {
+  // Map rows to books, ensuring unique entries by title
+  const booksMap = new Map<string, SheetBook>();
+  
+  dataRows.forEach((row, index) => {
     const title = row[0]?.trim();
-    // Skip if we already have this book or if required fields are missing
-    if (!title || acc.some(book => book.title === title)) {
-      return acc;
+    if (title && !booksMap.has(title)) {
+      const coverUrl = convertGoogleDriveUrl(row[3]?.trim() || '');
+      console.log(`Processing book ${index + 1}:`, {
+        title,
+        coverUrl: row[3]?.trim(),
+        convertedUrl: coverUrl
+      });
+      
+      booksMap.set(title, {
+        id: index + 1,
+        title,
+        author: row[1]?.trim() || '',
+        description: row[2]?.trim() || '',
+        coverUrl,
+        rating: parseFloat(row[4]) || 0,
+        sourceUrl: row[5]?.trim() || '#',
+      });
     }
-    
-    const coverUrl = convertGoogleDriveUrl(row[3]?.trim() || '');
-    console.log('Converting cover URL:', row[3]?.trim(), 'to:', coverUrl);
-    
-    acc.push({
-      id: acc.length + 1,
-      title: title,
-      author: row[1]?.trim() || '',
-      description: row[2]?.trim() || '',
-      coverUrl: coverUrl,
-      rating: parseFloat(row[4]) || 0,
-      sourceUrl: row[5]?.trim() || '#',
-    });
-    return acc;
-  }, []);
+  });
 
-  console.log('Processed books:', uniqueBooks);
-  return uniqueBooks;
+  const books = Array.from(booksMap.values());
+  console.log('Processed books:', books);
+  return books;
 };
