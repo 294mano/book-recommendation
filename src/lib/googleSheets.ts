@@ -17,8 +17,8 @@ const convertGoogleDriveUrl = (url: string): string => {
   if (fileIdMatch && fileIdMatch[1]) {
     const fileId = fileIdMatch[1];
     console.log('Extracted file ID:', fileId);
-    // Return the direct download URL
-    return `https://drive.google.com/uc?export=view&id=${fileId}`;
+    // Return the direct download URL with additional parameters
+    return `https://drive.google.com/uc?export=view&id=${fileId}&cache-control=no-cache`;
   }
   
   console.log('URL not converted:', url);
