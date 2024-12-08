@@ -6,8 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchBooks } from "@/lib/googleSheets";
 import { useToast } from "@/components/ui/use-toast";
 
-// Updated Sheet ID from the published URL
-const SHEET_ID = "2PACX-1vQACDPYIBHtZ8rWxiFYS-TYwQtEvKUtVtWIK97fN433c5RXGZ7cxnlGYG-5W8iEjA";
+// Updated Sheet ID from the shared URL
+const SHEET_ID = "1YMwkiAU17wE1jwZs3T-g40XUf9-mSjDj";
 
 const Index = () => {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
