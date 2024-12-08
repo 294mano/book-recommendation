@@ -69,9 +69,17 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
     
     // 只处理有标题的行
     if (title && !title.toLowerCase().includes('title')) {
-      // 解析评分，确保是数字
-      const parsedRating = parseFloat(rating);
-      const finalRating = !isNaN(parsedRating) ? parsedRating : 0;
+      // 改进评分解析逻辑
+      let parsedRating = 0;
+      if (rating) {
+        // 移除所有空白字符并尝试解析
+        const cleanRating = rating.replace(/\s+/g, '');
+        parsedRating = parseFloat(cleanRating);
+        // 如果解析失败或值不合理，设置为0
+        if (isNaN(parsedRating) || parsedRating < 0 || parsedRating > 5) {
+          parsedRating = 0;
+        }
+      }
       
       uniqueBooks.set(title, {
         id: uniqueBooks.size + 1,
@@ -79,7 +87,7 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
         author: author?.trim() || '',
         description: description?.trim() || '',
         coverUrl: convertGoogleDriveUrl(coverUrl?.trim() || ''),
-        rating: finalRating,
+        rating: parsedRating,
         sourceUrl: sourceUrl?.trim() || '#',
       });
     }
