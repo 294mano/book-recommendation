@@ -11,8 +11,13 @@ export interface SheetBook {
 const convertGoogleDriveUrl = (url: string): string => {
   if (!url) return 'https://picsum.photos/seed/default/300/450';
   
-  // 清理 URL 中的多余空格和换行符
-  const cleanUrl = url.replace(/\s+/g, '').trim();
+  // 清理 URL，移除所有空白字符和换行符
+  const cleanUrl = url.replace(/[\s\n\r]+/g, '').trim();
+  
+  // 检查是否已经是缩略图URL
+  if (cleanUrl.includes('thumbnail?id=')) {
+    return cleanUrl;
+  }
   
   const fileIdMatch = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
   if (fileIdMatch && fileIdMatch[1]) {
@@ -39,46 +44,43 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
   const text = await response.text();
   console.log('Raw CSV data:', text);
   
-  // 改進CSV解析邏輯
-  const rows = text.split('\n')
-    .map(row => {
-      // 使用更精確的CSV解析
-      const matches = row.match(/(".*?"|[^",\n]+)(?=\s*,|\s*$)/g);
-      return matches ? matches.map(cell => {
-        // 清理单元格数据
-        return cell
-          .replace(/^"|"$/g, '') // 移除引号
-          .replace(/""/g, '"') // 处理双引号
-          .trim(); // 移除空格
-      }) : null;
-    })
-    .filter((row): row is string[] => {
-      return row !== null && 
-             row[0]?.trim() !== '' && // 标题不为空
-             row[0]?.trim().toLowerCase() !== 'title' && // 不是标题行
-             !row[0]?.trim().startsWith(','); // 不是错误格式的行
-    });
+  // 分割行并移除表头
+  const lines = text.split('\n').slice(1);
   
-  console.log('Filtered rows:', rows);
-  
-  // 使用 Map 來去除重複的標題，並保持插入順序
+  // 使用 Map 存储唯一的书籍
   const uniqueBooks = new Map<string, SheetBook>();
   
-  rows.forEach((row) => {
-    const title = row[0]?.trim();
+  lines.forEach((line, index) => {
+    // 使用正则表达式匹配CSV字段，考虑引号内的逗号
+    const matches = line.match(/("([^"]|"")*"|[^,]*)(,|$)/g);
+    
+    if (!matches) return;
+    
+    // 清理匹配到的字段
+    const fields = matches.map(field => 
+      field
+        .replace(/^,|,$/g, '') // 移除开头和结尾的逗号
+        .replace(/^"|"$/g, '') // 移除引号
+        .replace(/""/g, '"') // 处理双引号
+        .trim()
+    );
+    
+    const [title, author, description, coverUrl, rating, sourceUrl] = fields;
+    
     // 只处理有标题的行
-    if (title) {
-      // 确保评分正确解析
-      const rating = row[4] ? parseFloat(row[4].trim()) : 0;
+    if (title && !title.toLowerCase().includes('title')) {
+      // 解析评分，确保是数字
+      const parsedRating = parseFloat(rating);
+      const finalRating = !isNaN(parsedRating) ? parsedRating : 0;
       
       uniqueBooks.set(title, {
         id: uniqueBooks.size + 1,
-        title,
-        author: row[1]?.trim() || '',
-        description: row[2]?.trim() || '',
-        coverUrl: convertGoogleDriveUrl(row[3]?.trim() || ''),
-        rating: isNaN(rating) ? 0 : rating,
-        sourceUrl: row[5]?.trim() || '#',
+        title: title.trim(),
+        author: author?.trim() || '',
+        description: description?.trim() || '',
+        coverUrl: convertGoogleDriveUrl(coverUrl?.trim() || ''),
+        rating: finalRating,
+        sourceUrl: sourceUrl?.trim() || '#',
       });
     }
   });
