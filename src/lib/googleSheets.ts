@@ -51,19 +51,20 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
   const uniqueBooks = new Map<string, SheetBook>();
   
   lines.forEach((line, index) => {
-    // 使用正则表达式匹配CSV字段，考虑引号内的逗号
+    // 使用正则表达式匹配CSV字段，考虑引号内的逗号和换行符
     const matches = line.match(/("([^"]|"")*"|[^,]*)(,|$)/g);
     
     if (!matches) return;
     
     // 清理匹配到的字段
-    const fields = matches.map(field => 
-      field
+    const fields = matches.map(field => {
+      const cleaned = field
         .replace(/^,|,$/g, '') // 移除开头和结尾的逗号
         .replace(/^"|"$/g, '') // 移除引号
         .replace(/""/g, '"') // 处理双引号
-        .trim()
-    );
+        .trim();
+      return cleaned;
+    });
     
     const [title, author, description, coverUrl, rating, sourceUrl] = fields;
     
@@ -71,15 +72,19 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
     if (title && !title.toLowerCase().includes('title')) {
       // 改进评分解析逻辑
       let parsedRating = 0;
-      if (rating) {
-        // 移除所有空白字符并尝试解析
-        const cleanRating = rating.replace(/\s+/g, '');
-        parsedRating = parseFloat(cleanRating);
-        // 如果解析失败或值不合理，设置为0
-        if (isNaN(parsedRating) || parsedRating < 0 || parsedRating > 5) {
-          parsedRating = 0;
+      const cleanRating = (rating || '').replace(/[\s\n\r]+/g, '');
+      
+      if (cleanRating) {
+        const ratingValue = parseFloat(cleanRating);
+        if (!isNaN(ratingValue) && ratingValue >= 0 && ratingValue <= 5) {
+          parsedRating = ratingValue;
         }
       }
+      
+      // 清理 sourceUrl
+      const cleanSourceUrl = (sourceUrl || '')
+        .replace(/[\s\n\r]+/g, '')
+        .trim();
       
       uniqueBooks.set(title, {
         id: uniqueBooks.size + 1,
@@ -88,7 +93,7 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
         description: description?.trim() || '',
         coverUrl: convertGoogleDriveUrl(coverUrl?.trim() || ''),
         rating: parsedRating,
-        sourceUrl: sourceUrl?.trim() || '#',
+        sourceUrl: cleanSourceUrl || '#',
       });
     }
   });
