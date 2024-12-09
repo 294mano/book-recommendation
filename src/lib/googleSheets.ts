@@ -51,7 +51,7 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
     if (!line) continue;
 
     // Parse CSV line handling quoted fields properly
-    let fields = [];
+    const fields: string[] = [];
     let currentField = '';
     let inQuotes = false;
     
@@ -60,7 +60,6 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
       
       if (char === '"') {
         if (inQuotes && line[j + 1] === '"') {
-          // Handle escaped quotes
           currentField += '"';
           j++;
         } else {
@@ -75,35 +74,49 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
     }
     fields.push(currentField.trim());
     
-    // Remove quotes from fields
-    fields = fields.map(field => field.replace(/^"|"$/g, '').replace(/""/g, '"'));
+    // Remove quotes and clean fields
+    const cleanFields = fields.map(field => 
+      field.replace(/^"|"$/g, '').replace(/""/g, '"').trim()
+    );
     
-    const [title, author, description, coverUrl, rating, sourceUrl] = fields;
+    const [title, author, description, coverUrl, rating, sourceUrl] = cleanFields;
     
-    if (title && !title.toLowerCase().includes('title')) {
-      // Parse rating - handle both integer and decimal values
-      let parsedRating = 0;
-      if (rating) {
-        const cleanRating = rating.trim().replace(/[^\d.]/g, '');
+    // Skip header row and invalid data rows
+    if (!title || title.toLowerCase().includes('title') || title.startsWith(',')) {
+      continue;
+    }
+    
+    // Skip rows that appear to be malformed (containing URLs in title)
+    if (title.includes('http') || title.includes('www.')) {
+      continue;
+    }
+
+    // Parse rating more strictly
+    let parsedRating = 0;
+    if (rating) {
+      const cleanRating = rating.replace(/[^\d.]/g, '');
+      if (cleanRating) {
         const ratingNum = parseFloat(cleanRating);
         if (!isNaN(ratingNum) && ratingNum >= 0 && ratingNum <= 5) {
           parsedRating = ratingNum;
         }
       }
-      
-      // Clean source URL - preserve the original URL without modification
-      const cleanSourceUrl = sourceUrl ? sourceUrl.trim() : '#';
-      
-      books.push({
-        id: books.length + 1,
-        title: title.trim(),
-        author: author?.trim() || '',
-        description: description?.trim() || '',
-        coverUrl: convertGoogleDriveUrl(coverUrl?.trim() || ''),
-        rating: parsedRating,
-        sourceUrl: cleanSourceUrl === '' ? '#' : cleanSourceUrl,
-      });
     }
+    
+    // Clean source URL - preserve the original URL without modification
+    const cleanSourceUrl = sourceUrl && !sourceUrl.startsWith(',') 
+      ? sourceUrl.trim() 
+      : '#';
+    
+    books.push({
+      id: books.length + 1,
+      title: title.trim(),
+      author: author?.trim() || '',
+      description: description?.trim() || '',
+      coverUrl: convertGoogleDriveUrl(coverUrl?.trim() || ''),
+      rating: parsedRating,
+      sourceUrl: cleanSourceUrl === '' ? '#' : cleanSourceUrl,
+    });
   }
 
   console.log('Processed books:', books);
