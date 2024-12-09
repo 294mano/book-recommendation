@@ -28,6 +28,37 @@ const convertGoogleDriveUrl = (url: string): string => {
   return url;
 };
 
+const parseCSVLine = (line: string): string[] => {
+  const fields: string[] = [];
+  let field = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        // 处理双引号转义
+        field += '"';
+        i++;
+      } else {
+        // 切换引号状态
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      // 字段结束
+      fields.push(field.trim());
+      field = '';
+    } else {
+      field += char;
+    }
+  }
+  
+  // 添加最后一个字段
+  fields.push(field.trim());
+  return fields;
+}
+
 export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
   if (!sheetId) {
     throw new Error('Missing Sheet ID');
@@ -51,28 +82,16 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
   const uniqueBooks = new Map<string, SheetBook>();
   
   lines.forEach((line, index) => {
-    // 使用正则表达式匹配CSV字段，考虑引号内的逗号和换行符
-    const matches = line.match(/("([^"]|"")*"|[^,]*)(,|$)/g);
+    if (!line.trim()) return; // 跳过空行
     
-    if (!matches) return;
-    
-    // 清理匹配到的字段
-    const fields = matches.map(field => {
-      const cleaned = field
-        .replace(/^,|,$/g, '') // 移除开头和结尾的逗号
-        .replace(/^"|"$/g, '') // 移除引号
-        .replace(/""/g, '"') // 处理双引号
-        .trim();
-      return cleaned;
-    });
-    
+    const fields = parseCSVLine(line);
     const [title, author, description, coverUrl, rating, sourceUrl] = fields;
     
     // 只处理有标题的行
     if (title && !title.toLowerCase().includes('title')) {
-      // 改进评分解析逻辑
+      // 解析评分
       let parsedRating = 0;
-      const cleanRating = (rating || '').replace(/[\s\n\r]+/g, '');
+      const cleanRating = rating ? rating.replace(/[\s\n\r]+/g, '').trim() : '';
       
       if (cleanRating) {
         const ratingValue = parseFloat(cleanRating);
@@ -82,9 +101,7 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
       }
       
       // 清理 sourceUrl
-      const cleanSourceUrl = (sourceUrl || '')
-        .replace(/[\s\n\r]+/g, '')
-        .trim();
+      const cleanSourceUrl = sourceUrl ? sourceUrl.replace(/[\s\n\r]+/g, '').trim() : '';
       
       uniqueBooks.set(title, {
         id: uniqueBooks.size + 1,
