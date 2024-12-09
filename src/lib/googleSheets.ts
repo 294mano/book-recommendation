@@ -42,41 +42,56 @@ export const fetchBooks = async (sheetId: string): Promise<SheetBook[]> => {
   const text = await response.text();
   console.log('Raw CSV data:', text);
   
-  // 分割行並移除表頭
+  // Split into lines and remove header
   const lines = text.split('\n').slice(1);
   const books: SheetBook[] = [];
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
+
+    // Parse CSV line handling quoted fields properly
+    let fields = [];
+    let currentField = '';
+    let inQuotes = false;
     
-    // 使用正則表達式匹配CSV字段，處理引號內的內容
-    const regex = /(?:^|,)(?:"([^"]*(?:""[^"]*)*)"|([^,]*))/g;
-    const fields: string[] = [];
-    let match;
-    
-    while ((match = regex.exec(line)) !== null) {
-      // 使用捕獲的帶引號或不帶引號的值
-      const value = match[1] !== undefined 
-        ? match[1].replace(/""/g, '"') // 處理雙引號轉義
-        : match[2];
-      fields.push(value ? value.trim() : '');
+    for (let j = 0; j < line.length; j++) {
+      const char = line[j];
+      
+      if (char === '"') {
+        if (inQuotes && line[j + 1] === '"') {
+          // Handle escaped quotes
+          currentField += '"';
+          j++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        fields.push(currentField.trim());
+        currentField = '';
+      } else {
+        currentField += char;
+      }
     }
+    fields.push(currentField.trim());
+    
+    // Remove quotes from fields
+    fields = fields.map(field => field.replace(/^"|"$/g, '').replace(/""/g, '"'));
     
     const [title, author, description, coverUrl, rating, sourceUrl] = fields;
     
-    // 只處理有效的標題行（排除標題行和無效數據）
-    if (title && !title.toLowerCase().includes('title') && !title.startsWith(',')) {
-      // 解析評分
+    if (title && !title.toLowerCase().includes('title')) {
+      // Parse rating - handle both integer and decimal values
       let parsedRating = 0;
       if (rating) {
-        const ratingNum = parseFloat(rating.replace(/[^\d.]/g, ''));
+        const cleanRating = rating.trim().replace(/[^\d.]/g, '');
+        const ratingNum = parseFloat(cleanRating);
         if (!isNaN(ratingNum) && ratingNum >= 0 && ratingNum <= 5) {
           parsedRating = ratingNum;
         }
       }
       
-      // 清理 sourceUrl
+      // Clean source URL - preserve the original URL without modification
       const cleanSourceUrl = sourceUrl ? sourceUrl.trim() : '#';
       
       books.push({
