@@ -40,7 +40,7 @@ const Index = () => {
           2025 AI精選應用書籍及工具索引
         </h1>
         <h2 className="font-merriweather text-xl text-red-600 text-center mb-8">
-          國家公益發展協進會示範
+          台科大酷點校園-no code AI示範
         </h2>
 
         {isLoading && (
